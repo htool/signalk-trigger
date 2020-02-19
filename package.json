@@ -1,0 +1,25 @@
+{
+  "name": "signalk-trigger",
+  "version": "1.0.0",
+  "description": "A plugin to trigger events when a condition is met",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codekilo/signalk-trigger.git"
+  },
+  "keywords": [
+    "signalk-node-server-plugin"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/codekilo/signalk-trigger/issues"
+  },
+  "dependencies": {
+    "jexl": "^2.2.2"
+  },
+  "homepage": "https://github.com/codekilo/signalk-trigger#readme"
+}
