@@ -17,10 +17,11 @@ module.exports = function(app) {
     // compile all expressions
     if (options.triggers) {
       options.triggers.forEach(trigger => {
-        if (trigger.condition && trigger.event) {
+        if (trigger.condition && trigger.event && trigger.context) {
           expressions.push({
             expression: jexl.compile(trigger.condition),
-            event: trigger.event
+            event: trigger.event,
+            context: trigger.context
           });
         } else {
           app.setProviderError("incomplete trigger configuration encountered");
@@ -40,12 +41,19 @@ module.exports = function(app) {
   };
   // check all triggers when a delta is received
   function handleDelta(delta) {
-    console.log(delta);
+    let context = app.getPath('vessels');
+    expressions.forEach(expression => {
+      if (expression.expression.evalSync(context[expression.context])) {
+        app.emit(expression.event, delta);
+        console.log("event triggered", expression.event);
+      }
+    });
   }
 
   plugin.stop = function() {
     // Here we put logic we need when the plugin stops
     app.debug('Plugin stopped');
+    expressions = [];
     unsubscribes.forEach(f => f());
     app.setProviderStatus("Stopped");
   };
@@ -64,6 +72,10 @@ module.exports = function(app) {
             condition: {
               type: 'string',
               title: "condition"
+            },
+            context: {
+              type: 'string',
+              title: "vessel"
             },
             event: {
               type: 'string',
