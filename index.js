@@ -1,4 +1,5 @@
 const jexl = require("jexl");
+const extractIdentifiers = require('./lib/extractIdentifiers.js');
 const PLUGIN_ID = 'signalk-trigger';
 const PLUGIN_NAME = 'Signalk trigger';
 var expressions = [];
@@ -67,15 +68,19 @@ module.exports = function(app) {
                 paths.push(`${value.path}.value`);
               });
             });
-            if (paths.some(e => {
-                return expression.identifiers.includes(e);
-              })) {
+            if (includesAny(paths, expression.identifiers)) {
               notify(expression.event, 'NO_CHANGE', delta);
             }
           }
         }
       }
       expression.previous = newValue;
+    });
+  }
+  // returns true if l1 contains any of the elements of l2
+  function includesAny(l1, l2) {
+    return l1.some(e => {
+      return l2.includes(e);
     });
   }
 
@@ -86,30 +91,6 @@ module.exports = function(app) {
       value: delta
     });
     app.debug("event triggered: " + type + ", " + event);
-  }
-
-  function extractIdentifiers(ast) {
-    if (ast.type == 'Identifier') {
-      return [concatIdentifier(ast)];
-    } else if (ast.type == 'BinaryExpression') {
-      return extractIdentifiers(ast.left).concat(extractIdentifiers(ast.right));
-    } else if (ast.type == 'UnaryExpression') {
-      return extractIdentifiers(ast.right);
-    } else if (ast.type == 'Literal') {
-      return [];
-    } else if (ast.type == 'FilterExpression') {
-      return extractIdentifiers(ast.subject).concat(extractIdentifiers(ast.expr));
-    } else if (ast.type == 'ConditionalExpression') {
-      return extractIdentifiers(ast.test).concat(extractIdentifiers(ast.consequent), extractIdentifiers(ast.alternate));
-    }
-  }
-
-  function concatIdentifier(identifier) {
-    if (identifier.from) {
-      return concatIdentifier(identifier.from) + "." + identifier.value;
-    } else {
-      return identifier.value;
-    }
   }
 
   plugin.stop = function() {
