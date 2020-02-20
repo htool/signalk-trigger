@@ -18,12 +18,14 @@ module.exports = function(app) {
     if (options.triggers) {
       options.triggers.forEach(trigger => {
         if (trigger.condition && trigger.event && trigger.context) {
+          let expr = jexl.compile(trigger.condition);
           expressions.push({
-            expression: jexl.compile(trigger.condition),
+            expression: expr,
             event: trigger.event,
             context: trigger.context,
             triggerType: trigger.triggerType,
-            previous: false
+            previous: false,
+            identifiers: extractIdentifiers(expr._ast)
           });
         } else {
           app.setProviderError("incomplete trigger configuration encountered");
@@ -56,7 +58,21 @@ module.exports = function(app) {
         }
       } else if (newValue == true) {
         if (expression.triggerType == 'ALWAYS') {
-          notify(expression.event, 'NO_CHANGE', delta);
+          // TODO only notify if delta updates a value in the condition
+          if (`vessels.${expression.context}` == delta.context) {
+            paths = [];
+            delta.updates.forEach(update => {
+              update.values.forEach(value => {
+                //TODO handle more static paths like mmsi
+                paths.push(`${value.path}.value`);
+              });
+            });
+            if (paths.some(e => {
+                return expression.identifiers.includes(e);
+              })) {
+              notify(expression.event, 'NO_CHANGE', delta);
+            }
+          }
         }
       }
       expression.previous = newValue;
@@ -70,6 +86,30 @@ module.exports = function(app) {
       value: delta
     });
     app.debug("event triggered: " + type + ", " + event);
+  }
+
+  function extractIdentifiers(ast) {
+    if (ast.type == 'Identifier') {
+      return [concatIdentifier(ast)];
+    } else if (ast.type == 'BinaryExpression') {
+      return extractIdentifiers(ast.left).concat(extractIdentifiers(ast.right));
+    } else if (ast.type == 'UnaryExpression') {
+      return extractIdentifiers(ast.right);
+    } else if (ast.type == 'Literal') {
+      return [];
+    } else if (ast.type == 'FilterExpression') {
+      return extractIdentifiers(ast.subject).concat(extractIdentifiers(ast.expr));
+    } else if (ast.type == 'ConditionalExpression') {
+      return extractIdentifiers(ast.test).concat(extractIdentifiers(ast.consequent), extractIdentifiers(ast.alternate));
+    }
+  }
+
+  function concatIdentifier(identifier) {
+    if (identifier.from) {
+      return concatIdentifier(identifier.from) + "." + identifier.value;
+    } else {
+      return identifier.value;
+    }
   }
 
   plugin.stop = function() {
