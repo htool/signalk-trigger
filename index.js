@@ -21,7 +21,9 @@ module.exports = function(app) {
           expressions.push({
             expression: jexl.compile(trigger.condition),
             event: trigger.event,
-            context: trigger.context
+            context: trigger.context,
+            triggerType: trigger.triggerType,
+            previous: false
           });
         } else {
           app.setProviderError("incomplete trigger configuration encountered");
@@ -43,11 +45,31 @@ module.exports = function(app) {
   function handleDelta(delta) {
     let context = app.getPath('vessels');
     expressions.forEach(expression => {
-      if (expression.expression.evalSync(context[expression.context])) {
-        app.emit(expression.event, delta);
-        console.log("event triggered", expression.event);
+      let newValue = expression.expression.evalSync(context[expression.context]);
+      if (newValue == true && expression.previous == false) {
+        if (expression.triggerType != 'FALLING') {
+          notify(expression.event, 'RISING', delta);
+        }
+      } else if (newValue == false && expression.previous == true) {
+        if (expression.triggerType != 'RISING') {
+          notify(expression.event, 'FALLING', delta);
+        }
+      } else if (newValue == true) {
+        if (expression.triggerType == 'ALWAYS') {
+          notify(expression.event, 'NO_CHANGE', delta);
+        }
       }
+      expression.previous = newValue;
     });
+  }
+
+  function notify(event, type, delta) {
+    app.emit(event, {
+      event: event,
+      type: type,
+      value: delta
+    });
+    app.debug("event triggered: " + type + ", " + event);
   }
 
   plugin.stop = function() {
@@ -68,6 +90,7 @@ module.exports = function(app) {
         items: {
           type: 'object',
           title: 'trigger',
+          required: ['condition', 'context', 'event'],
           properties: {
             condition: {
               type: 'string',
@@ -80,6 +103,13 @@ module.exports = function(app) {
             event: {
               type: 'string',
               title: "event"
+            },
+            triggerType: {
+              type: 'string',
+              title: 'trigger type',
+              enum: ['RISING', 'FALLING', 'BOTH', "ALWAYS"],
+              enumNames: ['Rising edge', 'Falling edge', 'Both edges', "for all deltas"],
+              default: 'BOTH'
             }
           }
         }

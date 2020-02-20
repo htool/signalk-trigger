@@ -32,5 +32,17 @@ The vessel for which this condition should be checked.
 #### event
 The name of the event that should be triggered when the condition is true.
 
+#### trigger type
+When to fire the event, has four available options
+
+- rising edge
+    + only sends the event when the condition becomes true
+- falling edge
+    + only sends the event when the condition becomes false
+- both edges 
+    + sends the event when the condition changes
+- for all deltas
+    + send the event for all deltas while the conditon is true, including an event on the falling edge
+
 ## use
 After setting this plugin up, other plugins can use the configured events to trigger actions by listening to them.
