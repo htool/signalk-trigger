@@ -1,8 +1,8 @@
-const jexl = require("jexl");
+const jexl = require('jexl');
 const extractIdentifiers = require('./lib/extractIdentifiers.js');
 const PLUGIN_ID = 'signalk-trigger';
 const PLUGIN_NAME = 'Signalk trigger';
-var expressions = [];
+var triggers = [];
 var unsubscribes = [];
 module.exports = function(app) {
   var plugin = {};
@@ -15,22 +15,18 @@ module.exports = function(app) {
     app.debug('Plugin started');
     plugin.options = options;
 
-    // compile all expressions
+    // compile all triggers
     if (options.triggers) {
       options.triggers.forEach(trigger => {
-        if (trigger.condition && trigger.event && trigger.context) {
-          let expr = jexl.compile(trigger.condition);
-          expressions.push({
-            expression: expr,
-            event: trigger.event,
-            context: trigger.context,
-            triggerType: trigger.triggerType,
-            previous: false,
-            identifiers: extractIdentifiers(expr._ast)
-          });
-        } else {
-          app.setProviderError("incomplete trigger configuration encountered");
-        }
+        let expr = jexl.compile(trigger.condition);
+        triggers.push({
+          expression: expr,
+          event: trigger.event,
+          context: trigger.context,
+          triggerType: trigger.triggerType,
+          previous: false,
+          identifiers: extractIdentifiers(expr._ast)
+        });
       });
       // subscribe to all delta messages
       app.signalk.on('delta', handleDelta);
@@ -38,29 +34,28 @@ module.exports = function(app) {
         app.signalk.removeListener('delta', handleDelta);
       });
 
-      app.setProviderStatus("Running");
+      app.setProviderStatus('Running');
 
     } else {
-      app.setProviderStatus("No triggers set");
+      app.setProviderStatus('No triggers set');
     }
   };
   // check all triggers when a delta is received
   function handleDelta(delta) {
     let context = app.getPath('vessels');
-    expressions.forEach(expression => {
-      let newValue = expression.expression.evalSync(context[expression.context]);
-      if (newValue == true && expression.previous == false) {
-        if (expression.triggerType != 'FALLING') {
-          notify(expression.event, 'RISING', delta);
+    triggers.forEach(trigger => {
+      let newValue = trigger.expression.evalSync(context[trigger.context]);
+      if (newValue == true && trigger.previous == false) {
+        if (trigger.triggerType != 'FALLING') {
+          notify(trigger.event, 'RISING', delta);
         }
-      } else if (newValue == false && expression.previous == true) {
-        if (expression.triggerType != 'RISING') {
-          notify(expression.event, 'FALLING', delta);
+      } else if (newValue == false && trigger.previous == true) {
+        if (trigger.triggerType != 'RISING') {
+          notify(trigger.event, 'FALLING', delta);
         }
       } else if (newValue == true) {
-        if (expression.triggerType == 'ALWAYS') {
-          // TODO only notify if delta updates a value in the condition
-          if (`vessels.${expression.context}` == delta.context) {
+        if (trigger.triggerType == 'ALWAYS') {
+          if (`vessels.${trigger.context}` == delta.context) {
             paths = [];
             delta.updates.forEach(update => {
               update.values.forEach(value => {
@@ -68,13 +63,13 @@ module.exports = function(app) {
                 paths.push(`${value.path}.value`);
               });
             });
-            if (includesAny(paths, expression.identifiers)) {
-              notify(expression.event, 'NO_CHANGE', delta);
+            if (includesAny(paths, trigger.identifiers)) {
+              notify(trigger.event, 'NO_CHANGE', delta);
             }
           }
         }
       }
-      expression.previous = newValue;
+      trigger.previous = newValue;
     });
   }
   // returns true if l1 contains any of the elements of l2
@@ -90,15 +85,15 @@ module.exports = function(app) {
       type: type,
       value: delta
     });
-    app.debug("event triggered: " + type + ", " + event);
+    app.debug('event triggered: ' + type + ', ' + event);
   }
 
   plugin.stop = function() {
     // Here we put logic we need when the plugin stops
     app.debug('Plugin stopped');
-    expressions = [];
+    triggers = [];
     unsubscribes.forEach(f => f());
-    app.setProviderStatus("Stopped");
+    app.setProviderStatus('Stopped');
   };
 
   plugin.schema = {
@@ -115,25 +110,33 @@ module.exports = function(app) {
           properties: {
             condition: {
               type: 'string',
-              title: "condition"
+              title: 'condition'
             },
             context: {
               type: 'string',
-              title: "vessel"
+              title: 'vessel'
             },
             event: {
               type: 'string',
-              title: "event"
+              title: 'event'
             },
             triggerType: {
               type: 'string',
               title: 'trigger type',
-              enum: ['RISING', 'FALLING', 'BOTH', "ALWAYS"],
-              enumNames: ['Rising edge', 'Falling edge', 'Both edges', "for all deltas"],
+              enum: ['RISING', 'FALLING', 'BOTH', 'ALWAYS'],
+              enumNames: ['Rising edge', 'Falling edge', 'Both edges', 'for all deltas'],
               default: 'BOTH'
             }
           }
         }
+      }
+    }
+  };
+
+  plugin.uiSchema = {
+    triggers: {
+      'ui:options': {
+        orderable: false
       }
     }
   };
