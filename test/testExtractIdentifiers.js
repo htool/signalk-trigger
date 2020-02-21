@@ -35,17 +35,17 @@ describe('extractIdentifiers', function() {
   });
 
   describe('binaryExpression', function() {
-    it('should return all identifiers', function() {
+    it('should return all identifiers on both sides of the expression', function() {
       let expr = jexl.compile('x > b');
       assert.deepEqual(extractIdentifiers(expr), ['x', 'b']);
     });
 
-    it('should return a single identifier left', function() {
+    it('should return the single identifier on the left side', function() {
       let expr = jexl.compile('x > 1');
       assert.deepEqual(extractIdentifiers(expr), ['x']);
     });
 
-    it('should return a single identifier right', function() {
+    it('should return the single identifier on the right side', function() {
       let expr = jexl.compile('1 > x');
       assert.deepEqual(extractIdentifiers(expr), ['x']);
     });
@@ -76,13 +76,24 @@ describe('extractIdentifiers', function() {
   });
 
   describe('arrayLiteral', function() {
-    it('should three identifiers', function() {
+    it('should return three identifiers when given an array of variables', function() {
       let expr = jexl.compile('[x,y,z]');
       assert.deepEqual(extractIdentifiers(expr), ['x', 'y', 'z']);
     });
 
-    it('should return no identifiers', function() {
+    it('should return no identifiers when given an array of values', function() {
       let expr = jexl.compile('[1,2,3]');
+      assert.deepEqual(extractIdentifiers(expr), []);
+    });
+  });
+  describe('objectLiteral', function() {
+    it('should return a single identifier', function() {
+      let expr = jexl.compile('{test: x}');
+      assert.deepEqual(extractIdentifiers(expr), ['x']);
+    });
+
+    it('should return no identifiers', function() {
+      let expr = jexl.compile('{test: 1}');
       assert.deepEqual(extractIdentifiers(expr), []);
     });
   });
