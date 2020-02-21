@@ -19,7 +19,7 @@ module.exports = function(app) {
     if (options.triggers) {
       options.triggers.forEach(trigger => {
         let expr = jexl.compile(trigger.condition);
-        let identifiers = extractIdentifiers(expr._ast);
+        let identifiers = extractIdentifiers(expr);
         triggers.push({
           expression: expr,
           event: trigger.event,
