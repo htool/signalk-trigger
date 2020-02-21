@@ -19,13 +19,14 @@ module.exports = function(app) {
     if (options.triggers) {
       options.triggers.forEach(trigger => {
         let expr = jexl.compile(trigger.condition);
+        let identifiers = extractIdentifiers(expr._ast);
         triggers.push({
           expression: expr,
           event: trigger.event,
           context: trigger.context,
           triggerType: trigger.triggerType,
           previous: false,
-          identifiers: extractIdentifiers(expr._ast)
+          identifiers: extractPaths(identifiers)
         });
       });
       // subscribe to all delta messages
@@ -59,8 +60,11 @@ module.exports = function(app) {
             paths = [];
             delta.updates.forEach(update => {
               update.values.forEach(value => {
-                //TODO handle more static paths like mmsi
-                paths.push(`${value.path}.value`);
+                if (value.path == '') {
+                  paths = paths.concat(Object.keys(value.value));
+                } else {
+                  paths.push(value.path);
+                }
               });
             });
             if (includesAny(paths, trigger.identifiers)) {
@@ -76,6 +80,18 @@ module.exports = function(app) {
   function includesAny(l1, l2) {
     return l1.some(e => {
       return l2.includes(e);
+    });
+  }
+
+  // removes .value from the end of an identifier to match the signalk path in a delta
+  function extractPaths(identifiers) {
+    return identifiers.map(identifier => {
+      let pathElements = identifier.split('.');
+      if (pathElements[pathElements.length - 1] == 'value') {
+        pathElements.pop();
+        return pathElements.join('.');
+      }
+      return indentifier;
     });
   }
 
