@@ -1,6 +1,8 @@
 const jexl = require('jexl');
 const extractIdentifiers = require('../lib/extractIdentifiers.js');
-const assert = require('assert');
+const chai = require('chai');
+const expect = chai.expect;
+const assert = chai.assert;
 
 describe('extractIdentifiers', function() {
   describe('literal', function() {
@@ -128,6 +130,29 @@ describe('extractIdentifiers', function() {
     it('should return a single identifier not two', function() {
       let expr = jexl.compile('test + test');
       assert.deepEqual(extractIdentifiers(expr), ['test']);
+    });
+  });
+  describe('noAst', function() {
+    it('should throw an exception when given an empty object', function() {
+      expect(() => extractIdentifiers({})).to.throw();
+    });
+    it('should throw an exception when given a null', function() {
+      expect(() => extractIdentifiers(null)).to.throw();
+    });
+    it('should throw an exception when given a string', function() {
+      expect(() => extractIdentifiers("null")).to.throw();
+    });
+    it('should throw an exception when given an undefined', function() {
+      expect(() => extractIdentifiers(undefined)).to.throw();
+    });
+  });
+  describe('unkownType', function() {
+    it('should throw an exception when finding an unkown type', function() {
+      expect(() => extractIdentifiers({
+        _ast: {
+          type: "unknown"
+        }
+      })).to.throw();
     });
   });
 });
