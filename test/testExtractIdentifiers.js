@@ -8,6 +8,10 @@ describe('extractIdentifiers', function() {
       let expr = jexl.compile('1');
       assert.deepEqual(extractIdentifiers(expr), []);
     });
+    it('should return an empty list when finding a string literal', function() {
+      let expr = jexl.compile('"test"');
+      assert.deepEqual(extractIdentifiers(expr), []);
+    });
   });
 
   describe('identifier', function() {
@@ -75,6 +79,29 @@ describe('extractIdentifiers', function() {
     });
   });
 
+  describe('Transform', function() {
+    it('should return one identifier no arguments', function() {
+      let expr = jexl.compile('test|double');
+      assert.deepEqual(extractIdentifiers(expr), ['test']);
+    });
+    it('should return two identifiers one argument', function() {
+      let expr = jexl.compile('test|split(temp)');
+      assert.deepEqual(extractIdentifiers(expr), ['test', 'temp']);
+    });
+    it('should return one identifier one argument literal', function() {
+      let expr = jexl.compile('test|split("temp")');
+      assert.deepEqual(extractIdentifiers(expr), ['test']);
+    });
+    it('should return one identifier one argument subject literal', function() {
+      let expr = jexl.compile('"test"|split(temp)');
+      assert.deepEqual(extractIdentifiers(expr), ['temp']);
+    });
+    it('should return no identifiers one argument both literal', function() {
+      let expr = jexl.compile('"test"|split("temp")');
+      assert.deepEqual(extractIdentifiers(expr), []);
+    });
+  });
+
   describe('arrayLiteral', function() {
     it('should return three identifiers when given an array of variables', function() {
       let expr = jexl.compile('[x,y,z]');
@@ -95,6 +122,12 @@ describe('extractIdentifiers', function() {
     it('should return no identifiers', function() {
       let expr = jexl.compile('{test: 1}');
       assert.deepEqual(extractIdentifiers(expr), []);
+    });
+  });
+  describe('noDuplicates', function() {
+    it('should return a single identifier not two', function() {
+      let expr = jexl.compile('test + test');
+      assert.deepEqual(extractIdentifiers(expr), ['test']);
     });
   });
 });
