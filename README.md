@@ -1,6 +1,6 @@
 # SignalK trigger plugin
 
-This package is designed to allow other signalk plugins 
+This package is designed to allow other signalk plugins to receive notifications when certain values exceed a threshold.
 
 ## Installation
 
@@ -24,7 +24,7 @@ $ npm link signalk-trigger
 for each trigger the following values are required:
 
 #### condition
-The condition that should trigger the even, uses [jexl](https://github.com/TomFrost/jexl) to evaluate the expression. The full signak tree for the specified vessel is available. The following expression would create an event when the vessel is going faster than 3 m/s : `navigation.speedOverGround.value > 3`
+The condition that should trigger the event, uses [jexl](https://github.com/TomFrost/jexl) to evaluate the expression. The full signak tree for the specified vessel is available. The following expression would create an event when the vessel is going faster than 3 m/s : `navigation.speedOverGround.value > 3`
 
 #### context
 The vessel for which this condition should be checked.
@@ -46,3 +46,34 @@ When to fire the event, has four available options
 
 ## use
 After setting this plugin up, other plugins can use the configured events to trigger actions by listening to them.
+
+The following example sets up a simple listener that will write to the plugins debug log
+
+```js 
+var unsubscribes = [];
+module.exports = function(app) {
+  var plugin = {};
+
+  plugin.id = 'your-plugin';
+  plugin.name = 'your plugin';
+  plugin.description = 'A plugin to send notifications when an event occurs';
+
+  plugin.start = function(options, restartPlugin) {
+    let _notify = function(event) {
+        app.debug(`Event received: ${event.event}, type: ${event.type}`);
+    }
+    app.on('eventName', _notify);
+    unsubscribes.push(() => {
+      eventEmitter.removeListener(event, _notify);
+    });
+
+    app.setProviderStatus('Running');
+  };
+
+   plugin.stop = function() {
+    unsubscribes.forEach(f => f());
+    app.setProviderStatus('Stopped');
+  };
+  return plugin;
+}
+```
