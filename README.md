@@ -20,14 +20,23 @@ $ npm link signalk-trigger
 ```
 
 ## configuration
+The configuration for the plugin has two parts, first define the variables that are required for the expressions and then define the expressions and the events they trigger.
 
+### context
+To create expressions you first have to define which signalk paths you will use and give them a short name:
+Each variable has two properties:
+
+#### path
+The signalk path, should include the vessel URN i.e. `urn:mrn:imo:mmsi:244770688.navigation.speedOverGround.value`
+
+#### name
+The name to give to this path in the expressions defined below i.e. `sog`
+
+### Trigger
 for each trigger the following values are required:
 
 #### condition
-The condition that should trigger the event, uses [jexl](https://github.com/TomFrost/jexl) to evaluate the expression. The full signak tree for the specified vessel is available. The following expression would create an event when the vessel is going faster than 3 m/s : `navigation.speedOverGround.value > 3`
-
-#### context
-The vessel for which this condition should be checked.
+The condition that should trigger the event, uses [jexl](https://github.com/TomFrost/jexl) to evaluate the expression. The full signak tree for the specified vessel is available. The following expression would create an event when the vessel is going faster than 3 m/s : `sog > 3`
 
 #### event
 The name of the event that should be triggered when the condition is true.

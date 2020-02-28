@@ -19,7 +19,8 @@
     "url": "https://github.com/codekilo/signalk-trigger/issues"
   },
   "dependencies": {
-    "jexl": "^2.2.2"
+    "jexl": "^2.2.2",
+    "lodash": "^4.17.15"
   },
   "homepage": "https://github.com/codekilo/signalk-trigger#readme",
   "devDependencies": {

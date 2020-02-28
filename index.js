@@ -1,4 +1,5 @@
 const jexl = require('jexl');
+const _ = require('lodash');
 const extractIdentifiers = require('./lib/extractIdentifiers.js');
 const PLUGIN_ID = 'signalk-trigger';
 const PLUGIN_NAME = 'Signalk trigger';
@@ -14,19 +15,22 @@ module.exports = function(app) {
   plugin.start = function(options, restartPlugin) {
     app.debug('Plugin started');
     plugin.options = options;
-
+    let contextMap = createContextMap(options.context);
     // compile all triggers
     if (options.triggers) {
       options.triggers.forEach(trigger => {
         let expr = jexl.compile(trigger.condition);
-        let identifiers = extractIdentifiers(expr);
+        let identifiers = extractPaths(extractIdentifiers(expr), contextMap);
+        let contexts = options.context.map(mapping => {
+          return mapping.path.split('.')[0];
+        });
         triggers.push({
           expression: expr,
           event: trigger.event,
-          context: trigger.context,
+          context: contexts,
           triggerType: trigger.triggerType,
           previous: false,
-          identifiers: extractPaths(identifiers)
+          identifiers: identifiers
         });
       });
       // subscribe to all delta messages
@@ -43,9 +47,9 @@ module.exports = function(app) {
   };
   // check all triggers when a delta is received
   function handleDelta(delta) {
-    let context = app.getPath('vessels');
+    let context = generateContext(plugin.options.context);
     triggers.forEach(trigger => {
-      let newValue = trigger.expression.evalSync(context[trigger.context]);
+      let newValue = trigger.expression.evalSync(context);
       if (newValue == true && trigger.previous == false) {
         if (trigger.triggerType != 'FALLING') {
           notify(trigger.event, 'RISING', delta);
@@ -56,7 +60,7 @@ module.exports = function(app) {
         }
       } else if (newValue == true) {
         if (trigger.triggerType == 'ALWAYS') {
-          if (`vessels.${trigger.context}` == delta.context) {
+          if (contextTest(trigger.context, delta.context)) {
             paths = [];
             delta.updates.forEach(update => {
               update.values.forEach(value => {
@@ -82,16 +86,42 @@ module.exports = function(app) {
       return l2.includes(e);
     });
   }
+  // compare list of contexts with deltacontext return true if deltaContext is matches with atleast one element of contexts
+  function contextTest(contexts, deltaContext) {
+    return contexts.some(context => {
+      return `vessels.${context}` == deltaContext;
+    });
+  }
+
+  function createContextMap(variables) {
+    let res = {};
+    variables.forEach(variable => {
+      res[variable.name] = variable.path;
+    });
+    return res;
+  }
+
+  function generateContext(variables) {
+    let res = {};
+    let context = app.getPath('vessels');
+    variables.forEach((variable) => {
+      res[variable.name] = _.get(context, variable.path);
+    });
+    return res;
+  }
 
   // removes .value from the end of an identifier to match the signalk path in a delta
-  function extractPaths(identifiers) {
-    return identifiers.map(identifier => {
+  function extractPaths(identifiers, contextMap) {
+    let paths = identifiers.map(identifier => {
+      return contextMap[identifier];
+    });
+    return paths.map(identifier => {
       let pathElements = identifier.split('.');
       if (pathElements[pathElements.length - 1] == 'value') {
         pathElements.pop();
-        return pathElements.join('.');
       }
-      return indentifier;
+      pathElements.shift();
+      return pathElements.join('.');
     });
   }
 
@@ -116,6 +146,24 @@ module.exports = function(app) {
     title: PLUGIN_NAME,
     type: 'object',
     properties: {
+      context: {
+        type: 'array',
+        title: 'context',
+        items: {
+          type: 'object',
+          title: 'variable',
+          properties: {
+            path: {
+              type: 'string',
+              title: 'path'
+            },
+            name: {
+              type: 'string',
+              title: 'name'
+            }
+          }
+        }
+      },
       triggers: {
         type: 'array',
         title: 'triggers',
@@ -127,10 +175,6 @@ module.exports = function(app) {
             condition: {
               type: 'string',
               title: 'condition'
-            },
-            context: {
-              type: 'string',
-              title: 'vessel'
             },
             event: {
               type: 'string',
@@ -151,6 +195,11 @@ module.exports = function(app) {
 
   plugin.uiSchema = {
     triggers: {
+      'ui:options': {
+        orderable: false
+      }
+    },
+    context: {
       'ui:options': {
         orderable: false
       }
