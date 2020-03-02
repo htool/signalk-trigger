@@ -28,6 +28,7 @@ Each variable has two properties:
 
 #### path
 The signalk path, should include the vessel URN i.e. `urn:mrn:imo:mmsi:244770688.navigation.speedOverGround.value`
+The path can not be part of the notifications subtree since that tree is ignored by the plugin.
 
 #### name
 The name to give to this path in the expressions defined below i.e. `sog`
