@@ -1,23 +1,6 @@
-# SignalK trigger plugin
+# SignalK event trigger plugin
 
 This package is designed to allow other signalk plugins to receive notifications when certain values exceed a threshold.
-
-## Installation
-
-To install this package clone it from git and run npm link.
-
-```
-git clone https://github.com/codekilo/signalk-trigger.git
-cd signalk-trigger
-sudo npm link
-```
-
-Then go to the SignalK configuration directory (probably `~/.signalk`)  and link the module again:
-
-```
-$ cd .signalk 
-$ npm link signalk-trigger
-```
 
 ## configuration
 The configuration for the plugin has two parts, first define the variables that are required for the expressions and then define the expressions and the events they trigger.
@@ -86,4 +69,21 @@ module.exports = function(app) {
   };
   return plugin;
 }
+```
+
+## Development
+
+To install this package for development clone it from git and run npm link.
+
+```
+git clone https://github.com/codekilo/signalk-trigger.git
+cd signalk-trigger
+sudo npm link
+```
+
+Then go to the SignalK configuration directory (probably `~/.signalk`)  and link the module again:
+
+```
+$ cd .signalk 
+$ npm link @codekilo/signalk-trigger-event
 ```

@@ -1,7 +1,7 @@
 {
-  "name": "signalk-trigger",
+  "name": "@codekilo/signalk-trigger-event",
   "version": "1.0.0",
-  "description": "A plugin to trigger events when a condition is met",
+  "description": "A plugin to trigger events when a configurable condition is met",
   "main": "index.js",
   "scripts": {
     "test": "mocha"
@@ -13,7 +13,7 @@
   "keywords": [
     "signalk-node-server-plugin"
   ],
-  "author": "",
+  "author": "Albert Smit <albertsmit93@gmail.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/codekilo/signalk-trigger/issues"
