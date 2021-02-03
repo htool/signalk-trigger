@@ -39,10 +39,10 @@ module.exports = function(app) {
         app.signalk.removeListener('delta', handleDelta);
       });
 
-      app.setProviderStatus('Running');
+      app.setPluginStatus('Running');
 
     } else {
-      app.setProviderStatus('No triggers set');
+      app.setPluginStatus('No triggers set');
     }
   };
   // check all triggers when a delta is received
@@ -142,7 +142,7 @@ module.exports = function(app) {
     app.debug('Plugin stopped');
     triggers = [];
     unsubscribes.forEach(f => f());
-    app.setProviderStatus('Stopped');
+    app.setPluginStatus('Stopped');
   };
 
   plugin.schema = {
@@ -173,7 +173,7 @@ module.exports = function(app) {
         items: {
           type: 'object',
           title: 'trigger',
-          required: ['condition', 'context', 'event'],
+          required: ['condition', 'event', 'triggerType'],
           properties: {
             condition: {
               type: 'string',
