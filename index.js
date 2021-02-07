@@ -5,6 +5,8 @@ const PLUGIN_ID = 'signalk-trigger';
 const PLUGIN_NAME = 'Signalk trigger';
 var triggers = [];
 var unsubscribes = [];
+var StartingUp = true;
+
 module.exports = function(app) {
   var plugin = {};
 
@@ -41,6 +43,11 @@ module.exports = function(app) {
 
       app.setPluginStatus('Running');
 
+      setTimeout(() => {
+        app.debug('Values should have settled. Turning events on.');
+        StartingUp = false;
+      }, 10000);
+
     } else {
       app.setPluginStatus('No triggers set');
     }
@@ -48,6 +55,9 @@ module.exports = function(app) {
   // check all triggers when a delta is received
   function handleDelta(delta) {
     //exclude notifications to avoid creating a lot of deltas when an event happens
+    if (typeof delta.updates[0].values[0].path == 'undefined') {
+       app.debug('Delta undefined: ' + JSON.stringify(delta));
+    }
     if (delta.updates[0].values[0].path.split('.')[0] != 'notifications') {
       let context = generateContext(plugin.options.context);
       triggers.forEach(trigger => {
@@ -129,12 +139,16 @@ module.exports = function(app) {
   }
 
   function notify(event, type, delta) {
-    app.emit(event, {
-      event: event,
-      type: type,
-      value: delta
-    });
-    app.debug('event triggered: ' + type + ', ' + event);
+    if (StartingUp == false) {
+      app.emit(event, {
+        event: event,
+        type: type,
+        value: delta
+      });
+      app.debug('event triggered: ' + type + ', ' + event);
+    } else {
+      app.debug('event suppressed (StartingUp): ' + type + ', ' + event);
+    }
   }
 
   plugin.stop = function() {
