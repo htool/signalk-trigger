@@ -55,44 +55,45 @@ module.exports = function(app) {
   // check all triggers when a delta is received
   function handleDelta(delta) {
     //exclude notifications to avoid creating a lot of deltas when an event happens
-    if (typeof delta.updates[0].values[0] == 'undefined') {
-       app.debug('Delta undefined: ' + JSON.stringify(delta));
-    }
-    if (delta.updates[0].values[0].path.split('.')[0] != 'notifications') {
-      let context = generateContext(plugin.options.context);
-      triggers.forEach(trigger => {
-        let newValue = trigger.expression.evalSync(context);
-        if (newValue == true && trigger.previous == false) {
-          if (trigger.triggerType != 'FALLING') {
-            notify(trigger.event, 'RISING', delta);
-          }
-        } else if (newValue == false && trigger.previous == true) {
-          if (trigger.triggerType != 'RISING') {
-            notify(trigger.event, 'FALLING', delta);
-          }
-        } else if (newValue == true) {
-          if (trigger.triggerType == 'ALWAYS') {
-            if (contextTest(trigger.context, delta.context)) {
-              paths = [];
-              delta.updates.forEach(update => {
-                update.values.forEach(value => {
-                  if (value.path == '') {
-                    paths = paths.concat(Object.keys(value.value));
-                  } else {
-                    paths.push(value.path);
-                  }
+    if (typeof delta.updates[0].values[0] != 'undefined') {
+      // Skip updates without value
+      if (delta.updates[0].values[0].path.split('.')[0] != 'notifications') {
+        let context = generateContext(plugin.options.context);
+        triggers.forEach(trigger => {
+          let newValue = trigger.expression.evalSync(context);
+          if (newValue == true && trigger.previous == false) {
+            if (trigger.triggerType != 'FALLING') {
+              notify(trigger.event, 'RISING', delta);
+            }
+          } else if (newValue == false && trigger.previous == true) {
+            if (trigger.triggerType != 'RISING') {
+              notify(trigger.event, 'FALLING', delta);
+            }
+          } else if (newValue == true) {
+            if (trigger.triggerType == 'ALWAYS') {
+              if (contextTest(trigger.context, delta.context)) {
+                paths = [];
+                delta.updates.forEach(update => {
+                  update.values.forEach(value => {
+                    if (value.path == '') {
+                      paths = paths.concat(Object.keys(value.value));
+                    } else {
+                      paths.push(value.path);
+                    }
+                  });
                 });
-              });
-              if (includesAny(paths, trigger.identifiers)) {
-                notify(trigger.event, 'NO_CHANGE', delta);
+                if (includesAny(paths, trigger.identifiers)) {
+                  notify(trigger.event, 'NO_CHANGE', delta);
+                }
               }
             }
           }
-        }
-        trigger.previous = newValue;
-      });
+          trigger.previous = newValue;
+        });
+      }
     }
   }
+
   // returns true if l1 contains any of the elements of l2
   function includesAny(l1, l2) {
     return l1.some(e => {
