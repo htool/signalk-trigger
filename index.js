@@ -46,7 +46,7 @@ module.exports = function(app) {
       setTimeout(() => {
         app.debug('Values should have settled. Turning events on.');
         StartingUp = false;
-      }, 10000);
+      }, 60000);
 
     } else {
       app.setPluginStatus('No triggers set');
