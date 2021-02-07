@@ -55,7 +55,7 @@ module.exports = function(app) {
   // check all triggers when a delta is received
   function handleDelta(delta) {
     //exclude notifications to avoid creating a lot of deltas when an event happens
-    if (typeof delta.updates[0].values[0].path == 'undefined') {
+    if (typeof delta.updates[0].values[0] == 'undefined') {
        app.debug('Delta undefined: ' + JSON.stringify(delta));
     }
     if (delta.updates[0].values[0].path.split('.')[0] != 'notifications') {
