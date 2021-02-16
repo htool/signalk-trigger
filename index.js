@@ -6,6 +6,7 @@ const PLUGIN_NAME = 'Signalk trigger';
 var triggers = [];
 var unsubscribes = [];
 var StartingUp = true;
+var eventSuppressTime = 0;
 var events = [];
 
 module.exports = function(app) {
@@ -18,7 +19,7 @@ module.exports = function(app) {
   plugin.start = function(options, restartPlugin) {
     plugin.options = options;
     let startupSilence = options.startupSilence;
-    let eventSuppressTime = options.eventSuppressTime;
+    eventSuppressTime = options.eventSuppressTime;
     let contextMap = createContextMap(options.context);
     app.debug('Plugin started. Startup silence time: ' + startupSilence + 's. Duplicate suppress period: ' + eventSuppressTime + 's.');
     // compile all triggers
