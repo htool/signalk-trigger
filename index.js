@@ -16,10 +16,11 @@ module.exports = function(app) {
   plugin.description = 'A plugin to trigger events when a condition is met';
 
   plugin.start = function(options, restartPlugin) {
-    app.debug('Plugin started');
     plugin.options = options;
     let startupSilence = options.startupSilence;
+    let eventSuppressTime = options.eventSuppressTime;
     let contextMap = createContextMap(options.context);
+    app.debug('Plugin started. Startup silence time: ' + startupSilence + 's. Duplicate suppress period: ' + eventSuppressTime + 's.');
     // compile all triggers
     if (options.triggers) {
       options.triggers.forEach(trigger => {
@@ -154,7 +155,6 @@ module.exports = function(app) {
   }
 
   function suppressEvent (type, event) {
-    eventSuppressTime = 30;
     if (StartingUp == true) {
       app.debug('event suppressed (StartingUp): ' + type + ', ' + event);
       return true;
@@ -204,8 +204,13 @@ module.exports = function(app) {
     properties: {
       startupSilence: {
         type: 'number',
-        title: 'Seconds to wait after startup for values to settle',
+        title: 'Seconds to suppress events at startup to wait for values to settle',
         default: 60
+      },
+      eventSuppressTime: {
+        type: 'number',
+        title: 'Seconds to suppress duplicate events',
+        default: 300
       },
       context: {
         type: 'array',
