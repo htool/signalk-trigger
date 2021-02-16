@@ -6,6 +6,7 @@ const PLUGIN_NAME = 'Signalk trigger';
 var triggers = [];
 var unsubscribes = [];
 var StartingUp = true;
+var events = [];
 
 module.exports = function(app) {
   var plugin = {};
@@ -17,6 +18,7 @@ module.exports = function(app) {
   plugin.start = function(options, restartPlugin) {
     app.debug('Plugin started');
     plugin.options = options;
+    let startupSilence = options.startupSilence;
     let contextMap = createContextMap(options.context);
     // compile all triggers
     if (options.triggers) {
@@ -44,9 +46,9 @@ module.exports = function(app) {
       app.setPluginStatus('Running');
 
       setTimeout(() => {
-        app.debug('Values should have settled. Turning events on.');
+        app.debug('Startup silence of ' + startupSilence + ' seconds passed. Values should have settled. Turning events on.');
         StartingUp = false;
-      }, 60000);
+      }, startupSilence * 1000);
 
     } else {
       app.setPluginStatus('No triggers set');
@@ -140,16 +142,52 @@ module.exports = function(app) {
   }
 
   function notify(event, type, delta) {
-    if (StartingUp == false) {
+    if (suppressEvent(type, event) == false) {
       app.emit(event, {
         event: event,
         type: type,
         value: delta
       });
       app.debug('event triggered: ' + type + ', ' + event);
-    } else {
-      app.debug('event suppressed (StartingUp): ' + type + ', ' + event);
+      recordEvent(type, event);
     }
+  }
+
+  function suppressEvent (type, event) {
+    eventSuppressTime = 30;
+    if (StartingUp == true) {
+      app.debug('event suppressed (StartingUp): ' + type + ', ' + event);
+      return true;
+    } else {
+      app.debug('Events : ' + JSON.stringify(events));
+      if (events.some(Event => Event.type === type && Event.event === event)) {
+        if (events.some(Event => Event.type === type && Event.event === event && (Event.epoch > Date.now() - (eventSuppressTime*1000)))) {
+          // Recent entry, suppress
+          app.debug('event suppressed (within ' + eventSuppressTime + ' seconds): ' + type + ', ' + event );
+          return true;
+        } else {
+          // Old entry, remove and don't suppressed
+          app.debug('Events before remove: ' + JSON.stringify(events));
+          events = events.filter(Event => Event.type != type || Event.event != event);
+          app.debug('Events after remove: ' + JSON.stringify(events));
+          return false;
+        }
+      } else {
+        // Also no reason to suppress
+        return false;
+      }
+    }
+  }
+
+  function recordEvent (type, event) {
+    let Event = {
+      'event': event,
+      'type': type,
+      'epoch': Date.now()
+    }
+    app.debug('Event: ' + JSON.stringify(Event));
+    events.push(Event);
+    app.debug('event recorded: ' + JSON.stringify(events));
   }
 
   plugin.stop = function() {
@@ -164,6 +202,11 @@ module.exports = function(app) {
     title: PLUGIN_NAME,
     type: 'object',
     properties: {
+      startupSilence: {
+        type: 'number',
+        title: 'Seconds to wait after startup for values to settle',
+        default: 60
+      },
       context: {
         type: 'array',
         title: 'context',
